@@ -1,0 +1,759 @@
+---
+title: "Startbucks Analysis ☕"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: scroll
+    source_code: embed
+---
+
+<style>
+.navbar {
+  background-color: darkgreen;
+}
+
+.navbar .navbar-nav .nav-item a:hover {
+  background-color: #004600;
+}
+
+.navbar .navbar-nav .nav-item.active a {
+  background-color: #004600;
+}
+
+.section.sidebar {
+  background-color: #F0FFF0;
+  top: 200.667px;
+}
+
+p {
+  text-align: justify;
+}
+
+.image-container {
+position: relative
+}
+</style>
+
+```{r setup, include=FALSE}
+# Define Code Chunk Defaults
+knitr::opts_chunk$set(
+  message = FALSE, 
+  warning = FALSE)
+set.seed(6) # Load Seed
+filter <- dplyr::filter # Define filter package
+
+# Load in all Required Packages
+library(flexdashboard)
+library(tidyverse)
+library(lubridate)
+library(naniar)
+library(broom)
+library(plotly)
+library(kableExtra)
+library(visdat)
+library(GGally)
+library(gridExtra)
+library(ggResidpanel)
+```
+
+```{r read-in}
+# Read in the Starbucks data
+starbucks <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-12-21/starbucks.csv')
+```
+
+1.0 Introduction {data-icon="fa-mug-hot"}
+=====================================
+
+Row {data-width = 600}
+-----
+
+###  <font style="font-size: 20px"> **Author** </font>
+
+**Name:** Jason Abi Chebli
+
+**Student ID:** 31444059
+
+**Email:** jabi0003@student.monash.edu
+
+###  <font style="font-size: 20px"> **Report Information** </font>
+
+**Lecturer:** Doctor Joan Tran
+
+**Unit:** ETC1010 Introduction to Data Analytics - Semester 2, 2023
+
+**School/Campus:** Monash University, Clayton, Australia
+
+**Due Date:** 15 October 2023
+
+Row {data-width = 600}
+-----
+
+###  <font style="font-size: 20px"> **Introduction** </font>
+
+<font style="font-size: 16px"> <u>**Research Questions:**</u> </font>
+
+Coffee, a source of essential energy for many, plays a prominent role in the daily lives of people. In Australia, a staggering 75% of Australians report consuming at least one cup of coffee per day, and 27% feel that their day is incomplete without this invigorating beverage (Accumulate Australia, 2023). Starbucks, often synonymous with coffee, stands as a leading global coffee supplier with an expansive network of 35,711 stores worldwide (Statista, 2023) and boasts an impressive daily sale of approximately 4 million coffee drinks (Fletcher, 2023).
+
+Given the indispensable role of coffee in daily routines, it is inevitable that coffee consumption may have significant health implications. With this in mind, our research embarks on addressing two crucial questions:
+
+***1. Which Starbucks (hot) coffee offers the highest caffeine content while maintaining the lowest calorie count?***
+
+Moreover, we observe a growing trend where an increasing number of individuals are turning to various milk alternatives. This trend is projected to rise by 7% (Seven Miles Coffee Roasters, 2020). Starbucks, in particular, provides an extensive selection of milk options, including whole milk, coconut milk, soy milk, 2% fat milk, and more. The question that naturally arises is: do these milk choices impact the overall healthiness of the beverage? This brings us to the second research question at the heart of this report.
+
+When placing an order at Starbucks, consumers often do not consider the nutritional values, such as trans-fats and cholesterol. Instead, their focus lies in just a few key decisions: 1. What drink? 2. What size? 3. What milk? 4. To add whipped cream or not? To assist consumers in making more informed choices when ordering, our final key research question is:
+
+***2. Regardless of the specific beverage, on average, how do the remaining choices (size, milk, whipped cream) impact the overall healthiness of the drink, and which combination emerges as the healthiest?***
+
+These questions will guide our investigation into the nutritional aspects of Starbucks beverages, aiding individuals in making informed choices about their coffee preferences when visiting Starbucks.
+
+Before conducting the analysis, it is imperative to thoroughly investigate and preprocess the data to align it with the requirements of each research question. For Research Question 1, please consult Sections 2.0 and 3.0, both of which provide insights into the data cleaning process and its subsequent utilization to address the respective inquiries. Likewise, for Research Question 2, please refer to Sections 4.0 and 5.0, which serve a similar purpose. Finally, for a comprehensive summary of the findings for both questions, please see Section 6.0, and for a complete list of all cited sources, refer to Section 7.0.
+
+
+Row {data-width = 600}
+-----
+
+### <font style="font-size: 20px">**Starbucks Data**</font>
+
+<font style="font-size: 16px"> <u>**Data Source:**</u> </font>
+
+The dataset utilised for this analysis is sourced from [Tidy Tuesday](https://github.com/rfordatascience/tidytuesday/blob/master/data/2021/2021-12-21/readme.md) (rfordatascience, 2020). This dataset is derived from the Official Starbucks Nutritional dataset, originally obtained from the pdf, Starbucks Coffee Company Beverage Nutrition Information. As a comprehensive repository of nutrition information, it encompasses all pertinent details regarding Starbucks beverages.
+
+The dataset contains `r nrow(starbucks)` observations and `r ncol(starbucks)` variables. To gain a better understanding of the data, a summary of the different variable names can be found in Table 1.1. As can be seen in Table 1.1 and when investigating the data, there are a few variables that have not been appropriately classified. For example, milk, whip, serv_size_m_l, calories, cholestrol_mg, sodium_mg, total_carbs_g, fibre_g, sugar_g and caffeine_g are all whole numbers and as such, should be more appropriately classified as `integer`. Arguably, some of the variables such as size, milk and whip could potentially be manipulated to be classified as `factor`. 
+
+The dataset also reveals that there are `r length(unique(starbucks$product_name))` different drinks available to order, spanning from hot coffees to iced coffees, teas, and cold drinks (known as Refreshers), to name a few. Additionally, it is important to note that there are no missing values ('NA') in the data, which is good, as depicted in Figure 1.1. However, it is worth mentioning that there are still a few limitations associated with the data source as discussed in the following section.  
+
+***
+<font style="font-size: 16px"> <u>**Limitations of the Data Source:**</u> </font>
+
+It is essential to acknowledge certain limitations inherent in the dataset:
+
+1. Incomplete Data: The dataset is not fully complete, with Steamed Milk data being omitted from the dataset. This omission could potentially impact our analysis and conclusions, as it prevents us from considering an entire milk category, which may have diverse effects on the nutritional profiles of specific beverage variants.
+
+2. Data Age: As of the today, `r format(today(tz = "Australia/Melbourne"),"%e %B %Y")` AEST, the dataset is approximately `r today(tz = "Australia/Melbourne") - ymd("2021-12-21")` days old. This temporal gap may influence our findings since, over time, Starbucks may have introduced newer beverages or modified existing recipes, potentially affecting our final results and comparisons.
+
+3. Rounded Values: As discussed above, there are numerous variables that are whole numbers, such as sugar. Given that this occurs with so many variables, it is clear that the data has already been somewhat manipulated and altered. As such, this rounding that has already been completed could influence the findings.
+
+4. Toppings Missing: Starbucks allows customers to add various toppings. Some drinks already come with these toppings, while others do not but could have them added on. In this dataset, only whipped cream is considered an extra add-on. Furthermore, this dataset does not consider any drinks that have had toppings removed upon request. Overall, this could influence the findings and lead to inconclusive results.
+
+These limitations notwithstanding, the dataset serves as a valuable foundation for our analysis, offering insight into the nutritional aspects of Starbucks drinks up to its last update in December 2021.
+
+
+###  <font style="font-size: 20px">**Variables Information Table**</font>
+
+```{r variable_info}
+variable_info_table <- data.frame(
+  Variable = c("product_name", "size", "milk", "whip", "serv_size_m_l", "calories", "total_fat_g", "saturated_fat_g", "trans_fat_g", "cholesterol_mg", "sodium_mg", "total_carbs_g", "fiber_g", "sugar_g", "caffeine_mg"),
+  Class = c("character", "character", "double", "double", "double", "double", "double", "double", "character", "double", "double", "double", "character", "double", "double"),
+  Description = c("Product Name", "Size of drink (i.e. short, tall, grande, venti)", "Type of milk used: none (0); nonfat (1); 2% (2); soy (3); coconut (4); whole (5)", "Whip cream added or not (binary 0/1)", "Serving size in ml", "Calories in Cal", "Total fat in grams", "Saturated fat in grams", "Trans fat in grams", "Cholesterol in milligrams", "Sodium in milligrams", "Total Carbs in grams", "Fiber in grams", "Sugar in grams", "Caffeine in milligrams")
+)
+
+variable_info_table |> 
+kable(caption = "Table 1.1: The Variables in the Dataset (rfordatascience, 2020)") |> 
+  kable_styling(full_width = FALSE) |> 
+  column_spec(1, width = "30%") 
+```
+
+***
+### <font style="font-size: 20px">**Missingness Figure**</font>
+
+```{r check-missingness}
+vis_miss(starbucks)  + 
+  labs(title = "Figure 1.1: Missingness of Starbucks Drinks Data") +
+  theme(plot.margin = margin(0.4, 0.8, 0.4, 0.4, "in"))
+```
+
+2.0 Data Wrangling for Research Question 1 {data-icon="fa-broom"}
+=====================================
+
+Row {data-width=150}
+--------------------------------------
+```{r wrangle-data-q1}
+# Determine which drinks have the highest caffeine
+highest_caffeine_product <- starbucks |> 
+  select(product_name, size, milk, caffeine_mg) |> 
+  arrange(desc(caffeine_mg))
+
+# Determine which drinks have the zero caffeine
+zero_calories <- starbucks |> 
+  filter(calories == 0) |> 
+  select(product_name, size, milk, caffeine_mg) |> 
+  arrange(desc(caffeine_mg)) 
+
+# Determine which drinks have the highest caffeine per calorie
+highest_caffeine_per_calorie <- starbucks |> 
+  filter(calories != 0) |> 
+  mutate(caffeine_per_calorie = caffeine_mg/calories) |> 
+  select(product_name, size, milk, caffeine_per_calorie) |> 
+  arrange(desc(caffeine_per_calorie)) 
+
+# Wrangle the data for research question 1 to include only conventionally "hot" coffees
+coffees_only <- starbucks |> 
+filter(!str_detect(product_name, "tea"), !str_detect(product_name, "Tea"), !str_detect(product_name, "Hot Chocolate"), !str_detect(product_name, "Lemonade"), !str_detect(product_name, "Smoothie"), !str_detect(product_name, "Ice"), !str_detect(product_name, "ice"), !str_detect(product_name, "Cold"), !str_detect(product_name, "Frappuccino"), !str_detect(product_name, "Refresher") , !str_detect(product_name, "Fibre Powder"), !(size %in% c("solo", "doppio", "triple", "quad", "1 shot")))
+
+coffees_only <- coffees_only |> 
+    mutate(caffeine_per_calorie = caffeine_mg/calories) |> 
+  select(product_name, milk, size, caffeine_per_calorie, caffeine_mg, calories) |> 
+  arrange(desc(caffeine_per_calorie)) 
+
+size_order <- c("short", "tall", "grande", "venti")
+coffees_only$size <- factor(coffees_only$size, levels = size_order)
+
+coffees_only_no_milk <- coffees_only |> 
+  filter(milk == 0)
+```
+
+### Number of Observations Removed
+
+```{r}
+num_obs_removed_q1 <- nrow(starbucks) - nrow(coffees_only)
+
+perc_obs_removed_q1 <- (num_obs_removed_q1 / nrow(starbucks)) * 100
+
+obs_removed_text_q1 <- paste(num_obs_removed_q1, " (", round(perc_obs_removed_q1, 2), "%)", sep = "")
+
+valueBox(value = obs_removed_text_q1, icon = "fa-binoculars", caption = "Observations Cleaned", color = "orange")
+```
+
+### Number of Different Drinks Removed
+
+```{r}
+num_drinks_removed_q1 <- length(unique(starbucks$product_name)) - length(unique(coffees_only$product_name))
+
+perc_drinks_removed_q1 <- (num_drinks_removed_q1/ length(unique(starbucks$product_name))) * 100
+
+drinks_removed_text_q1 <- paste(num_drinks_removed_q1, " (", round(perc_drinks_removed_q1, 2), "%)", sep = "")
+
+valueBox(value = drinks_removed_text_q1,icon = "fa-mug-saucer", caption = "Unique Drinks Cleaned", color = "orange")
+```
+
+Row {.tabset data-height=1000}
+------
+
+### **Table 2.1: Most Caffeinated Drinks**
+```{r most-caf-drinks}
+# Display which drinks have the highest caffeine
+highest_caffeine_product |> 
+  head(10) |> 
+  rename("Product Name" = product_name, "Size" = size, "Milk Type" = milk, "Caffeine (mg)" = caffeine_mg) |>
+  kable(caption = "Table 2.1: Top 10 Highest Caffeinated Drinks at Starbucks [5]") |> 
+  kable_styling(full_width = FALSE)
+
+```
+
+### **Table 2.2: Highest Caffeine per Calorie Drinks**
+```{r high-caf-per-cal}
+
+# Display which drinks have the highest caffeine per calorie
+highest_caffeine_per_calorie |> 
+  head(10) |> 
+  mutate(caffeine_per_calorie = round(caffeine_per_calorie, 2)) |> 
+  rename("Product Name" = product_name, "Size" = size, "Milk Type" = milk, "Caffeine per Calorie (mg/Cal)" = caffeine_per_calorie) |>
+  kable(caption = "Table 2.2: Top 10 Starbucks Drinks that provide the Most Amount of Caffeine per Calorie [5]") |> 
+  kable_styling(full_width = FALSE)
+```
+
+### **Table 2.3: Highest Caffeinated Zero Calorie Drinks**
+```{r high-caf-no-cal}
+
+# Display which drinks have zero calories 
+zero_calories |>
+  head(10) |>
+  rename(
+    "Product Name" = product_name,
+    "Size" = size,
+    "Milk Type" = milk,
+    "Caffeine (mg)" = caffeine_mg
+  ) |>
+  kable(caption = "Table 2.3: Top 10 Starbucks Drinks that have the Most Caffeine and Zero Calories") |>
+  kable_styling(full_width = FALSE)
+```
+
+### **Table 2.4: Cleaned Data Coffee Names**
+```{r cleaned-data-coffee-names}
+# Display the product names of the wrangled data, i.e. the names of the conventionally "hot" coffees
+coffees_only |>
+  select(product_name) |>
+  unique() |>
+  rename("Product Name" = product_name) |>
+  kable(caption = "Table 2.4: All the Different Coffees in the Final Analysis") |>
+  kable_styling(full_width = FALSE) 
+```
+
+Column {.sidebar data-width=800}
+----
+
+### <font style="font-size: 20px">**Data Wrangling for Research Question 1**</font>
+
+The first research question aims to determine which Starbucks coffee has the highest caffeine content while still being considered healthy. Before delving into data wrangling to address this question, it is essential to investigate the dataset thoroughly to ensure that we obtain accurate results.
+
+Table 2.1 presents the top 10 most caffeinated beverages at Starbucks. Notably, seven out of the top 10 are hot coffees, with the remaining three being iced coffees. Our initial findings suggest that hot coffees generally contain higher caffeine levels compared to most other beverage types available at Starbucks.
+
+Table 2.2 showcases the top 10 Starbucks beverages that offer the most caffeine per calorie. Interestingly, when compared to Table 2.1, Table 2.2 exclusively features hot coffees. This initial observation suggests that, at first glance, hot coffees are often the healthiest choice when seeking to maximize caffeine intake while minimizing calorie consumption.
+
+It's important to mention that to calculate the caffeine per calorie values in Table 2.2, "healthy" drinks with zero calories had to be excluded from the analysis since their caffeine per calorie ratio would be infinite. Consequently, this led to the removal of `r nrow(zero_calories)` drinks from the evaluation. However, to ensure we didn't overlook any significant contenders, Table 2.3 reveals that the highest-caffeinated drink with zero calories is `r zero_calories$product_name[1]`, containing only `r zero_calories$caffeine_mg[1]` mg of caffeine. When compared to the highest-caffeinated drinks at Starbucks (Table 2.1), which go as high as `r highest_caffeine_product$caffeine_mg[1]` mg of caffeine, this is a minimal amount. Therefore, it is justifiable to omit zero-calorie drinks when considering caffeine per calorie.
+
+It's worth noting that factors beyond the choice of drink, such as size and milk type, play a role. That's why these factors are included in Tables 2.1, 2.2, and 2.3.
+
+In summary, Tables 2.2 and 2.3 provide confidence that hot coffees offer the most caffeine for the fewest calories. Therefore, we can now confidently proceed with data wrangling to address the first research question: which coffee offers the highest caffeine content for the lowest calorie intake?
+
+To achieve this, we will clean the data, retaining only "conventional" (hot) coffees and excluding teas, hot chocolates, lemonades, smoothies, iced or cold beverages, frappuccinos (a type of iced coffee), refreshers, fiber powder drinks, and any drinks that do not fall into the conventional short, tall, grande, and venti sizes as these would not be (hot) coffees.
+
+After this data cleaning process, we observe that the refined dataset contains only `r nrow(coffees_only)` observations, with `r length(unique(coffees_only$product_name))` different types of coffees included. That means that, in the cleaning process, `r round(perc_obs_removed_q1,2)`% of observations were removed and `r round(perc_drinks_removed_q1,2)`% of drinks were removed. This sounds quite substantial, but we know from our initial investigation that anything that is not "conventional" (hot) coffee are not strong contenders and, therefore, should not be removed to aid in the analysis. A list of the remaining coffees up for analysis can be found in Table 2.4.
+
+
+3.0 Data Analysis for Research Question 1 {data-icon="fa-magnifying-glass-chart"}
+=====================================
+
+Row {.tabset data-height=700}
+------
+
+### **Figure 3.1: Distribution of the Caffeine per Calorie **
+```{r caffeine-per-calorie-distribution}
+caffeine_per_calorie_dist <- coffees_only |> 
+  ggplot(aes(x = caffeine_per_calorie)) +
+    geom_histogram(colour="blue", fill="blue", alpha=0.5, bins=150)  +
+  labs(title = "Figure 3.1: Distribution of Caffeine per Calorie for Hot Coffees",
+       x = "Caffeine per Calorie (mg/Cal)",
+       y = "Frequency") +
+  theme_bw()
+
+ggplotly(caffeine_per_calorie_dist)
+```
+
+### **Figure 3.2: Different Milk and Size Intake Affect on Caffeine and Calories **
+
+```{r milk-and-size-influence}
+milk_size_influence_plot <- coffees_only |>
+  ggplot(aes(
+    x = caffeine_mg,
+    y = calories,
+    color = milk,
+    size = size,
+    label = product_name
+  )) +
+  geom_point() +
+  labs(title = "Figure 3.2: How Hot Coffees Caffeine Varies with Calories, Milk and Size",
+       x = "Caffeine (mg)",
+       y = "Calories (Cal)") +
+  theme_minimal()
+
+ggplotly(milk_size_influence_plot)
+```
+
+### **Figure 3.3: No Milk Hot Coffees Caffeine and Calories **
+```{r no-milk-coffees-caffeine-calorie-plot}
+no_milk_caffeine_calories_plot <- coffees_only_no_milk |>
+  ggplot(aes(
+    x = caffeine_mg,
+    y = calories,
+    color = product_name,
+    size = size
+  )) +
+  geom_point() +
+  labs(title = "Figure 3.3: Hot Coffees with No Milk Caffeine and Calories",
+       x = "Caffeine (mg)",
+       y = "Calories (cal)") +
+  theme_minimal()
+
+ggplotly(no_milk_caffeine_calories_plot)
+```
+
+### **Table 3.1: Highest Caffeine per Calorie Starbucks Coffees**
+```{r caf-per-cal-coffee}
+coffees_only |> 
+  arrange(desc(caffeine_per_calorie)) |> 
+  select(product_name, caffeine_per_calorie, caffeine_mg, calories, size, milk) |> 
+  head(10) |> 
+  rename("Product Name" = product_name, "Caffeine per Calorie (mg/Cal)" = caffeine_per_calorie, "Caffeine (mg)" = caffeine_mg, "Calories (Cal)" = calories, "Size" = size, "Milk Type" = milk) |>
+  kable(caption = "Table 3.1: Top 10 Starbucks Coffees that provide the Most Amount of Caffeine per Calorie") |> 
+  kable_styling(full_width = FALSE)
+options(digits = 4)
+
+top_coffee <- coffees_only |> 
+  arrange(desc(caffeine_per_calorie)) |> 
+  select(product_name, caffeine_per_calorie, caffeine_mg, calories, size, milk) |> 
+  slice(1)
+
+top_three_coffees <-
+  coffees_only |> arrange(desc(caffeine_per_calorie)) |> select(product_name) |>
+  head(10) |> unique()
+```
+
+Column {.sidebar data-width=700}
+----
+
+### <font style="font-size: 20px">**Data Analysis for Research Question 1**</font>
+
+The first research question is: *Which Starbucks (hot) coffee offers the highest caffeine content while maintaining the lowest calorie count?*
+
+To better understand and address this question, we will first investigate how Starbucks' "conventional" (hot) coffees perform in terms of caffeine per calorie, as depicted in Figure 3.1. As shown in Figure 3.1, most of Starbucks' hot coffees have very low caffeine per calorie scores, with 149 coffees having 0.6363 mg of caffeine per calorie. A value less than one signifies that in those 149 coffees, there are more calories than caffeine. A large proportion (approximately `r nrow(coffees_only|>filter(caffeine_per_calorie <= 2))`) of hot coffees at Starbucks have a caffeine per calorie less than 2 mg of Caffeine/Cal. However, there are `r nrow(coffees_only)-nrow(coffees_only|>filter(caffeine_per_calorie <= 2))` outliers with more than 2 mg of Caffeine/Cal. This initial analysis indicates that caution should be exercised when ordering hot coffees at Starbucks, as a significant portion of them do not offer enough caffeine and are instead less healthy.
+
+To maximize the amount of caffeine per calorie, we can either increase the caffeine amount, decrease the calorie amount, or both.
+
+Therefore, we will first identify hot coffees with a high calorie content and explore ways to reduce them. Figure 3.2 will help us determine how milk type and/or size influence calories and caffeine. Regarding milk type, a general pattern can be observed where milk type 0 (no milk) has the least amount of calories, and calorie content tends to increase with the addition of milk, with whole milk (milk type 5) contributing the most calories. This is consistent with the fact that all milk types, other than no milk (0), contains high amounts of calories, such as whole milk with 220 calories or 2% low-fat milk with 183 calories (Zelman, 2021). Therefore, Figure 3.2 suggests that to minimize calories, choosing no-milk options at Starbucks is advisable, as these options have the lowest calorie values along the bottom x-axis. No conclusions can be drawn about how size may impact consumption, as there is still a significant amount of data.
+
+Now, let's consider how calories and caffeine are impacted by the size of coffee ordered, specifically for coffees with no milk. This analysis is presented in Figure 3.3. As shown in Figure 3.2, no-milk coffees have reduced calorie content, and we want to determine how to maximize caffeine per calorie. Figure 3.3 indicates that, in general, as the coffee size increases, the amount of caffeine also increases, which is intuitive since larger coffees contain more caffeine. Additionally, Figure 3.3 shows that for most no-milk hot coffees, as the size increases, calories also increase. This is most evident in the Espresso - Caffe Americano coffee on Figure 3.3. However, there are a few hot coffees where, as the size increases, the calorie content starts to plateau or remains constant. For instance, for light, medium, and dark roast Clover Brew Coffee, regardless of the size, calorie content remains constant at 10 Cal, while caffeine content increases. A similar pattern can be seen with different roasts of Brewed Coffee, with a slight increase in caffeine content as the size gets larger, but then it plateaus with no calorie difference between a grande and a venti.
+
+One would typically expect a linear relationship between coffee size and calories/caffeine, where larger size means more of both. However, this is not the case for all hot coffees. Possible explanations for this deviation include Starbucks adjusting their recipe/ratio for larger sizes to meet customer expectations for more caffeine. Alternatively, the rounding of calorie and caffeine values in the analyzed data could lead to the appearance of no change in calories as size increases, even if there is a slight change. Lastly, inaccuracies in Starbucks' provided data might also play a role, warranting further investigation.
+
+Overall, Figure 3.3 suggests that, in general, larger sizes contain more caffeine, with a negligible increase in calories.
+
+Therefore, as shown in Table 3.1, to maximize caffeine per calorie, ordering a hot coffee with no milk and typically a larger size is recommended. If we consider any hot coffee with less than 157 calories as healthy (Zelman, 2021), then choosing no-milk options guarantees a healthy choice, with the highest calorie content in a no-milk hot coffee being 25 calories (as seen in Figure 3.3).
+
+Table 3.1 summarizes the top 10 responses to the research question, identifying the best coffee for maximizing caffeine per calorie as a `r top_coffee$size` sized, `r top_coffee$milk` milk type `r top_coffee$product_name`, with `r top_coffee$caffeine_per_calorie` mg of caffeine per calorie. When examining Table 3.1, it's evident that only three unique products make the top 10: `r top_three_coffees$product_name[1]`, `r top_three_coffees$product_name[2]`, and `r top_three_coffees$product_name[3]`. Therefore, ordering any of these three products, regardless of size, will provide the most caffeine per calorie.
+
+It's important to note that a "healthy adult can safely consume around 400mg of caffeine a day" (Healthdirect, 2023). Given that the coffee with the highest caffeine per calorie has `r top_coffee$caffeine_mg` mg of caffeine, it's very close to this threshold. Therefore, it's advisable that young adults, pregnant women, or individuals with health concerns avoid ordering a `r top_coffee$size` sized, `r top_coffee$milk` milk type `r top_coffee$product_name` due to its high caffeine content. They should explore lower-scoring coffees instead. In contrast, regular healthy adult coffee drinkers should be able to safely enjoy the top coffee. While it may seem like a lot of caffeine, frequent coffee consumption can require higher caffeine intake to maintain energy levels due to increased adenosine receptor sensitivity (Romm, 2016). This makes it a potentially good choice for coffee enthusiasts, especially among the 27% of Australians who feel that they cannot get through the day without coffee (Accumulate Australia, 2023).
+
+4.0 Data Wrangling for Research Question 2 {data-icon="fa-broom"}
+=====================================
+
+Row {data-width=150}
+--------------------------------------
+```{r wrangle-data-q2}
+# Create Categorical Data
+starbucks_cat_data <- starbucks |> 
+  filter(size %in% c("short", "tall", "grande", "venti")) |> 
+  mutate(tall = ifelse(size == "tall",1,0), grande = ifelse(size == "grande",1,0), venti = ifelse(size == "venti",1,0)) |> 
+  mutate(nonfat = ifelse(milk == 1,1,0), twoperc = ifelse(milk == 2,1,0), soy = ifelse(milk == 3,1,0),coconut = ifelse(milk == 4,1,0),whole = ifelse(milk == 5,1,0)) |> 
+    select(product_name, tall, grande, venti, nonfat, twoperc, soy, coconut, whole, calories, whip, milk, size)
+
+starbucks_cat_data$size <- factor(starbucks_cat_data$size, levels = size_order)
+
+```
+
+### Number of Observations Removed
+
+```{r}
+num_obs_removed_q2 <- nrow(starbucks) - nrow(starbucks_cat_data)
+
+perc_obs_removed_q2 <- (num_obs_removed_q2 / nrow(starbucks)) * 100
+
+obs_removed_text_q2 <- paste(num_obs_removed_q2, " (", round(perc_obs_removed_q2, 2), "%)", sep = "")
+
+valueBox(value = obs_removed_text_q2, icon = "fa-binoculars", caption = "Observations Cleaned", color = "orange")
+```
+
+### Number of Different Drinks Removed
+
+```{r}
+num_drinks_removed_q2 <- length(unique(starbucks$product_name)) - length(unique(starbucks_cat_data$product_name))
+
+perc_drinks_removed_q2 <- (num_drinks_removed_q2 / length(unique(starbucks$product_name))) * 100
+
+drinks_removed_text_q2 <- paste(num_drinks_removed_q2, " (", round(perc_drinks_removed_q2, 2), "%)", sep = "")
+
+valueBox(value = drinks_removed_text_q2,icon = "fa-mug-saucer", caption = "Unique Drinks Cleaned", color = "orange")
+```
+
+
+Row {data-width = 150}
+------
+
+### **Table 4.1: Random Sample of the Data used for Linear Regression**
+```{r}
+starbucks_cat_data |>
+  sample_frac(1) |>  # randomizes the data
+  select(calories, nonfat, twoperc, soy, coconut, whole, tall, grande, venti, whip) |> #outputs only the variables used in the linear regression
+  head(10) |>
+  rename(
+    "Calories" = calories,
+    "Non Fat Milk" = nonfat,
+    "2% Fat Milk" = twoperc,
+    "Soy Milk" = soy,
+    "Coconut Milk" = coconut,
+    "Whole Milk" = whole,
+    "Tall Size" = tall,
+    "Grande Size" = grande,
+    "Venti Size" = venti,
+    "Whipped Cream" = whip
+  ) |>
+  kable(caption = "Table 4.1: Random Sample of Data used for Linear Regression that contains Dummy Variables") |>
+  kable_styling(full_width = FALSE)
+
+```
+
+Column {.sidebar data-width=700}
+----
+
+### <font style="font-size: 20px">**Data Wrangling for Research Question 2**</font>
+
+The second research question is: *Regardless of the specific beverage, on average, how do the remaining choices (size, milk, whipped cream) impact the overall healthiness of the drink, and which combination emerges as the healthiest?*
+
+When customers visit Starbucks, they often do not consider nutritional information, such as sugar and trans fats, but rather focus on the following aspects:
+
+1. Choice of drink
+2. Size selection
+3. Milk type preference
+4. Whether to add whipped cream or not
+
+Assuming the customer selects their preferred drink from Starbucks, this research aims to assist them in understanding how, on average, the choices of size, milk type, and the decision to add whipped cream affect the overall calorie content of their beverage. This will enable them to make an informed decision, selecting a drink they enjoy while keeping it relatively healthier.
+
+To help customers comprehend how to make their beverage healthier, a linear model will be constructed. All three ordering parameters (Size, Milk Type, Toppings) can be classified as categorical data. To include them in a linear model, we must employ "dummy variables." When creating these dummy variables, one of the categorical options must be omitted, known as the 'base variable.' In this analysis, the base variables are as follows:
+
+1. *For Size:* Small
+2. *For Milk Type:* None (0)
+3. *For Whipped Cream:* None (0)
+
+In our analysis, we will only consider standard drinks with sizes Short, Tall, Grande, or Venti. This means that "shots," "solos," "trentas," and "quads," etc., have been excluded from this analysis. This exclusion simplifies the linear regression and is deemed acceptable since these drinks constitute only a small portion of the available options at Starbucks. In fact, only approximately `r round(perc_obs_removed_q2,2)`% of observations were removed, resulting in the removal of approximately `r round(perc_drinks_removed_q2,2)`% of drinks.
+
+In summary, dummy variables have been created for different sizes, milk types, and whipped cream. The data is now prepared for linear regression. You can see a sample of the wrangled data that will be used for the linear regression in Table 4.1.
+
+
+5.0 Data Analysis for Research Question 2  {data-icon="fa-magnifying-glass-chart"}
+=====================================
+
+Row {.tabset data-height=500}
+------
+
+### **Figure 5.1: Calories vs Size**
+```{r cal-vs-size-plot}
+size_cal_plot <- starbucks_cat_data |> 
+  ggplot(aes(x = reorder(factor(size),calories), y = calories, fill = factor(size))) +
+  geom_boxplot() +
+  labs(title = "Figure 5.1: Calories vs. Size", x = "Sizes", y = "Calories (Cal)") +
+  scale_x_discrete(labels = c("Short", "Tall", "Grande", "Venti")) +
+  coord_flip()
+
+ggplotly(size_cal_plot)
+```
+
+### **Figure 5.2: Calories vs Milk Type**
+```{r cal-vs-milk-plot}
+milk_cal_plot <- starbucks_cat_data |> 
+  ggplot(aes(x = reorder(factor(milk),calories), y = calories, fill = factor(milk))) +
+  geom_boxplot() +
+  labs(title = "Figure 5.2: Calories vs. Milk Type", x = "Milk Type", y = "Calories (Cal)") +
+  scale_x_discrete(labels = c("None", "Nonfat", "Coconut", "Soy", "2%", "Whole")) +
+  coord_flip()
+
+ggplotly(milk_cal_plot)
+```
+
+### **Figure 5.3: Calories vs Whip Cream**
+```{r cal-vs-whip-plot}
+
+whip_cal_plot <- starbucks_cat_data |> 
+  mutate(whip_cream = ifelse(whip == 1, "Whip", "No Whip")) |> 
+  ggplot(aes(x = factor(whip_cream),y = calories, fill = factor(whip_cream))) +
+  geom_boxplot() +
+  labs(title = "Figure 5.3: Calories vs. Whip Cream", x = "Whip Cream", y = "Calories (Cal)") +
+  scale_x_discrete(labels = c("No Whip Cream", "Whip Cream")) +
+  coord_flip()
+
+ggplotly(whip_cal_plot)
+```
+
+Row {.tabset data-height=700}
+------
+
+### **Table 5.1: Linear Regression: Calories vs Size**
+```{r cal-vs-size-lm}
+# Checking relationship between different sizes and calories
+starbucks_size_lm <- lm(calories ~ tall + grande + venti, data = starbucks_cat_data)
+coef_size_lm <- tidy(starbucks_size_lm)
+
+coef_size_lm |> 
+    rename("Term" = term, "Estimate" = estimate, "Standard Error" = std.error, "Statistic" = statistic, "P Value" = p.value) |> 
+    kable(caption = "Table 5.1: Linear Regression: Calories vs Size") |> 
+  kable_styling(full_width = FALSE)
+
+data.frame(
+  Metric = c("R-squared", "Adjusted R-squared"),
+  Value = c(summary(starbucks_size_lm)$r.squared, summary(starbucks_size_lm)$adj.r.squared)) |> 
+  kable() |> 
+  kable_styling(full_width = FALSE)
+```
+
+### **Table 5.2: Linear Regression: Calories vs Milk Type**
+```{r cal-vs-milk-lm}
+#Checking the relationship between different milks and calories
+starbucks_milk_lm <- lm(calories ~  nonfat + twoperc + soy + coconut + whole, data = starbucks_cat_data)
+coef_milk_lm <- tidy(starbucks_milk_lm)
+
+coef_milk_lm |> 
+    rename("Term" = term, "Estimate" = estimate, "Standard Error" = std.error, "Statistic" = statistic, "P Value" = p.value) |> 
+    kable(caption = "Table 5.2: Linear Regression: Calories vs Milk Type") |> 
+  kable_styling(full_width = FALSE)
+
+data.frame(
+  Metric = c("R-squared", "Adjusted R-squared"),
+  Value = c(summary(starbucks_milk_lm)$r.squared, summary(starbucks_milk_lm)$adj.r.squared)) |> 
+  kable() |> 
+  kable_styling(full_width = FALSE)
+```
+
+
+### **Table 5.3: Linear Regression: Calories vs Whipped Cream**
+```{r cal-vs-whip-lm}
+#Checking relationship between whip and non whip and calories
+starbucks_whip_lm <- lm(calories ~  whip, data = starbucks_cat_data)
+coef_whip_lm <- tidy(starbucks_whip_lm)
+
+coef_whip_lm |> 
+    rename("Term" = term, "Estimate" = estimate, "Standard Error" = std.error, "Statistic" = statistic, "P Value" = p.value) |> 
+    kable(caption = "Table 5.3: Linear Regression: Calories vs Whipped Cream") |> 
+  kable_styling(full_width = FALSE)
+
+data.frame(
+  Metric = c("R-squared", "Adjusted R-squared"),
+  Value = c(summary(starbucks_whip_lm)$r.squared, summary(starbucks_whip_lm)$adj.r.squared)) |> 
+  kable() |> 
+  kable_styling(full_width = FALSE)
+```
+
+
+### **Table 5.4: Linear Regression: Calories vs All**
+```{r cal-vs-all-lm}
+# Checking the relationship between different milks, sizes and whip and calories
+starbucks_calories_lm <- lm(calories ~  tall + grande + venti + nonfat + twoperc + soy + coconut + whole + whip, data = starbucks_cat_data)
+coef_starbucks_calories_lm <- tidy(starbucks_calories_lm)
+
+coef_starbucks_calories_lm  |> 
+  rename("Term" = term, "Estimate" = estimate, "Standard Error" = std.error, "Statistic" = statistic, "P Value" = p.value) |> 
+    kable(caption = "Table 5.4: Linear Regression: Calories vs All") |> 
+  kable_styling(full_width = FALSE)
+
+data.frame(
+  Metric = c("R-squared", "Adjusted R-squared"),
+  Value = c(summary(starbucks_calories_lm)$r.squared, summary(starbucks_calories_lm)$adj.r.squared)) |> 
+  kable() |> 
+  kable_styling(full_width = FALSE)
+```
+
+
+### **Figure 5.4: Linear Regression: Calories vs All Model Fit **
+```{r cal-vs-all-fit}
+resid_panel(starbucks_calories_lm, plots = c("resid","qq","hist"))
+```
+
+Column {.sidebar data-width=800}
+----
+
+### <font style="font-size: 20px">**Data Analysis for Research Question 2**</font>
+
+The second research question is: *Regardless of the specific beverage, on average, how do the remaining choices (size, milk, whipped cream) impact the overall healthiness of the drink, and which combination emerges as the healthiest?*
+
+To better understand and address this question, we will first investigate how the calories of Starbucks drinks vary with different sizes, milk types, and the presence of whipped cream. These variations are visualized in Figures 5.1, 5.2, and 5.3, respectively.
+
+Figure 5.1 illustrates how calories vary with different drink sizes. It is apparent from Figure 5.1 that as drink sizes increase, so do the number of calories, but there is also an increase in the spread of calorie values. For example, some drinks like teas have zero calories regardless of size. This explains the minimum value of 0 in Figure 5.1. However, the median and maximum calorie values also increase with size, which is logical as more liquid generally means more calories. Hence, Figure 5.1 provides evidence that there is a relationship between drink size and calories.
+
+Figure 5.2 explores how calorie content varies with different milk types. It is clear that most no-milk (type 0) drinks have very low calories, with a few outliers. In contrast, whole milk contributes the most calories. For all milk types, other than no-milk, the spread of calorie values appears somewhat similar. This could be attributed to other ingredients mixed with the various milk types. Overall, Figure 5.2 suggests that the choice of milk type significantly impacts calorie content, as different milk types add varying amounts of calories to the drink.
+
+Figure 5.3 investigates how the presence of whipped cream affects calorie content. Figure 5.3 indicates that drinks with whipped cream have a median calorie content that is more than double that of drinks without whipped cream. The spread of calorie values between the two categories is somewhat similar, emphasizing the impact of whipped cream on calorie content.
+
+It is evident from Figures 5.1, 5.2, and 5.3 that the three remaining choices people have when ordering a drink—namely, size, milk type, and the decision to add whipped cream—all influence the overall health of the drink. After visualizing the correlation between these parameters and calories (using the `ggpairs()` function from the GGally package, not shown here), it is valuable to conduct a more in-depth investigation into how size, milk type, and whipped cream influence calories. Thus, linear regression models between calories and these parameters were conducted and can be seen in Tables 5.1, 5.2, and 5.3, respectively. The dependent variable in all of these models is calories, as we seek to understand how calories are influenced by these three parameters. The base variables used to create the dummy variables are as follows:
+
+1. *For Size:* small
+2. *For Milk Type:* none (0)
+3. *For Whipped Cream:* no whipped cream (0)
+
+Hence, all estimates are made in comparison to these base variables.
+
+Table 5.1 presents the linear regression model between Calories and size as follows: 
+$$\hat{Calories} = 116.44 + 65.85\;tall + 131.47\;grande + 203.70\;venti$$
+
+As observed in Table 5.1, the p-value for all independent variables and the intercept is approximately 0, indicating that all estimates are statistically significant and should be retained. Moreover, all estimate values are quite substantial, further confirming their statistical significance. The intercept in the linear regression signifies that, on average, a small-sized drink contains 116.44 calories. The coefficients indicate that choosing a different size, on average, increases the drink's calorie content compared to a small-sized drink. For instance, a tall-sized drink will have, on average, 65.85 more calories than a small-sized one, while a venti-sized drink will have, on average, 203.70 calories more than a small-sized one.
+
+Overall, these estimates provide valuable insights, but it is important to assess the goodness of fit. The R-squared value for this model, approximately `r summary(starbucks_size_lm)$r.squared`, indicates that only `r round(summary(starbucks_size_lm)$r.squared*100,2)`% of the variation in calorie content can be explained by the drink size. While this is a good result for a single set of dummy variables, it remains relatively low in explaining all variations in calorie content.
+
+Similar analyses were performed for the linear regressions between Calories and Milk Type and between Calories and Whipped Cream (Tables 5.2 and 5.3, respectively). Table 5.2 presents the linear regression model between Calories and Milk Type as follows:
+$$\hat{Calories} = 63.28 + 166.38\;nonfat + 213.32\;twoperc + 190.89\;soy + 183.27\;coconut + 234.94\;whole$$
+Meanwhile, Table 5.3 presents the linear regression model between Calories and Whipped Cream as: 
+$$\hat{Calories} = 188.7 + 182.5\;whip$$
+In both cases, the p-values for the independent variables and intercepts are approximately zero, confirming the statistical significance of the estimates. For the linear regression between calories and milk type (Table 5.2), the intercept indicates that a no-milk drink, on average, contains 63.28 calories. The estimates for different milk types reveal how many more calories, on average, are added to the drink compared to a no-milk drink. For example, nonfat milk adds 166.38 more calories on average, while whole milk adds 234.94 more calories on average.
+
+In the linear regression between calories and whipped cream (Table 5.3), the intercept indicates that a drink without whipped cream contains, on average, 188.7 calories. The single slope estimate suggests that adding whipped cream results in, on average, 182.5 more calories compared to a drink without whipped cream.
+
+While these estimates are informative, their predictive power must be considered. The R-squared values for the linear regressions between calories and milk type and between calories and whipped cream (Tables 5.2 and 5.3) are approximately `r round(summary(starbucks_milk_lm)$r.squared*100,2)`% and `r round(summary(starbucks_whip_lm)$r.squared*100,2)`%, respectively, indicating that a significant portion of the model's variance can be explained by these parameters. However, similarly, wile these are a good result for a single set of dummy variables, it remains relatively low in explaining all variations in calorie content.
+
+Additionally, it should be noted that, out of the three models seen in Table 5.1, 5.2 and 5.3, the linear regression model between Calories and Whipped Cream fits the data the best. Considering the different numbers of variables in the three linear equations, it is essential to focus on the adjusted R-squared values, which take into account the added variables. As can be seen from Table 5.3, the Calories and Whipped Cream model had the highest adjusted R-squared value of `r summary(starbucks_whip_lm)$adj.r.squared`.
+
+However, overall these fits are still too low. Further investigation revealed that combining all three parameters in a single linear model yields a more accurate prediction of calorie content (Table 5.4). The adjusted R-squared value for this model, `r summary(starbucks_calories_lm)$adj.r.squared`, is much more acceptable.
+
+Table 5.4 presents the linear regression model between Calories and all three parameters as follows:
+
+$\hat{Calories} = -39.34 + 46.56\;tall + 112.75\;grande + 184.55\;venti + 126.50\;nonfat + 167.37\;twoperc \\ \; \;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\; + 149.08\;soy + 137.32\;coconut + 189.00\;whole  + 153.17\;whip$
+
+In this model, all estimates are positive (other than the intercept), and their significance remains consistent (as the p-value is approximately 0 for all). The intercept being negative does not have a practical meaning, but it is necessary for the model. All estimates represent how many more calories, on average, are added to the drink when compared to the base variables. For example, a tall-sized drink will have, on average, 46.56 more calories than a small-sized drink, while a drink with whole milk will have, on average, 189 more calories than a drink without milk.
+
+Overall, while these estimates provide valuable insights into the impact of size, milk type, and whipped cream on calorie content, it is important to note that these are just estimates. The R-squared value indicates that `r round(summary(starbucks_calories_lm)$r.squared*100,2)`% of the actual calorie variation can be explained by this model, which is good but is not perfect. Figure 5.4, provides a summary of key plots to determine how good the fit is. The residual plot in Figure 5.4 indicate that the model is somewhat appropriate, with no discernible pattern and the values somewhat lying around 0. Additionally, the histogram of the residuals, seen in Figure 5.4, is somewhat normally distributed, which indicates that is a good fit as a good fit would have a normal distribution of the residuals. Finally, majority of the points line near or on the line in the qq-plot seen in Figure 5.4 also indicate that the model is appropriate, as a 'thick marker' test may at best highlight only a few outliers towards the top. 
+
+To conclude, next time a customer orders a coffee from Starbucks, they should consider that the biggest impact to the health of their drink include, for:
+
+1. *Size:* Ordering a Venti size has, on average, 184.55 more calories than a small size.
+2. *Milk Type:* Ordering with whole milk has, on average, 189 more calories than no-milk.
+3. *Whipped Cream:* Ordering with whipped cream has, on average, 153.17 more calories than no whipped cream.
+
+Ultimately, given all estimates are positive and quite substantial, it suggests that the healthiest combination of options is to choose a small-sized drink without milk and without whipped cream. 
+
+6.0 Conclusion {data-icon="fa-clipboard"}
+=====================================
+
+The analysis of Starbucks beverage data addressed two key research questions:
+
+**Research Question 1:** 
+
+*Which Starbucks (hot) coffee offers the highest caffeine content while maintaining the lowest calorie count?*
+
+It was found that no-milk hot coffees often performed the best, with opting for larger sizes having some slight impact. Furthermore, a list of the top 10 best (hot) coffee orders can be seen in Table 3.1, which ultimately states that the best coffee for maximizing caffeine per calorie is a `r top_coffee$size` sized, `r top_coffee$milk` milk type `r top_coffee$product_name`, which has `r top_coffee$caffeine_per_calorie` mg of caffeine per calorie.
+
+It was also found that, as seen in Table 3.1, only three unique products make the top 10, namely, `r top_three_coffees$product_name[1]`; `r top_three_coffees$product_name[2]`; and `r top_three_coffees$product_name[3]`. This means that ordering any of these three hot coffees, regardless of size, will ultimately provide a substantial amount of caffeine per calorie.
+
+Finally, it should be noted that for regular healthy adult coffee drinkers, the top hot coffee will be more than appropriate to give you the energy you need. However, for young adults, pregnant women, or individuals with health concerns, one may want to consider drinking some of the lower-ranking coffees in the top 10 list, as although they are calorie-free, they could still impact your overall wellness due to the high caffeine concentration.
+
+**Research Question 2:**
+
+*Regardless of the specific beverage, on average, how do the remaining choices (size, milk, whipped cream) impact the overall healthiness of the drink, and which combination emerges as the healthiest?*
+
+We found that the choice of size, milk type, and the presence of whipped cream significantly influences the overall healthiness of a Starbucks drink. Visualizing the data through Figures 5.1, 5.2, and 5.3 revealed clear trends:
+
+- *Size:* Larger drinks generally have more calories, but there's variation within each size category.
+- *Milk Type:* Different milk types contribute varying calorie amounts, with whole milk having the most calories.
+- *Whipped Cream:* Adding whipped cream approximately doubles the calorie content compared to a drink without it.
+
+Further analysis using linear regression models confirmed these findings and quantified the impact of each parameter on calorie content. A model, with an R-squared value of `r round(summary(starbucks_calories_lm)$r.squared*100,2)`%, was ultimately the most appropriate at estimating the influence of the different parameters on calories, with the worst contenders for the different categories being:
+
+- *For Size:* Ordering a Venti size has, on average, 184.55 more calories than a small size.
+- *For Milk* Type: Ordering with whole milk has, on average, 189 more calories than no milk.
+- *For Whipped Cream:* Ordering with whipped cream has, on average, 153.17 more calories than without whipped cream.
+
+Ultimately, our analysis found that for those seeking a healthier option at Starbucks, on average, choosing a small-sized drink without milk and without whipped cream is the best choice.
+
+**Further Work:**
+
+Some major limitations regarding both research questions, but particularly research question one, pertain to the dataset. Further investigation should be conducted on the dataset to ensure that the values obtained are as accurate as possible. Furthermore, a more up-to-date dataset should be considered in future works. Hopefully, this would result in less incomplete data, fewer rounded values, fewer missing options, and more relevant products, allowing for more accurate modeling and analysis to be conducted.
+
+7.0 References {data-icon="fa-book-bookmark"}
+=====================================
+  Accumulate Australia. (2013, July 26). 27 Coffee Consumption Statistics from Australia 2023. Retrieved from https://accumulate.com.au/27-coffee-consumption-statistics-from-australia-2023/
+
+  Fletcher, L. (2013, February 6). How many cups of coffee does Starbucks sell a day? Retrieved from https://talkleisure.com/how-many-cups-of-coffee-does-starbucks-sell-a-day/
+
+  Goode, K., & Rey, K. (2012). ggResidpanel: Panels and Interactive Versions of Diagnostic Plots using 'ggplot2'. R package version 0.3.0.9000. Retrieved from https://goodekat.github.io/ggResidpanel/
+  
+  Grolemund, G., & Wickham, H. (2011). Dates and Times Made Easy with lubridate. Journal of Statistical Software, 40(3), 1–25. Retrieved from https://www.jstatsoft.org/v40/i03/
+
+  Healthdirect. (2013). Caffeine. Retrieved from https://www.healthdirect.gov.au/caffeine
+
+  Plotly Technologies Inc. (2015). Collaborative data science. Montreal, QC: Plotly Technologies Inc. Retrieved from https://plot.ly
+
+  rfordatascience. (2020, July). Starbucks. Retrieved from https://github.com/rfordatascience/tidytuesday/blob/master/data/2021/2021-12-21/readme.md
+  
+  Robinson, D., & Hayes, A. (2018). broom: Convert Statistical Analysis Objects into Tidy Data Frames (Version 1.0.5) [Computer software]. Retrieved from https://cran.r-project.org/web/packages/broom/index.html
+
+  Romm, C. (2016, July 28). Here's how to undo a caffeine tolerance. Retrieved from https://www.thecut.com/2016/07/heres-how-to-undo-a-caffeine-tolerance.html#
+
+  RStudio Team. (2020). RStudio: Integrated Development for R. RStudio, PBC, Boston, MA. Retrieved from http://www.rstudio.com/
+
+  Seven Miles Coffee Roasters. (2020, June 30). Milk alternatives for coffee (tested and compared). Retrieved from https://www.sevenmiles.com.au/blogs/editorial/milk-alternatives-for-coffee#
+
+  Statista. (2013, May 11). Starbucks - statistics & facts. Retrieved from https://www.statista.com/topics/1246/starbucks/#topicOverview
+
+  Tierney, N., & Cook, D. (2013). Expanding Tidy Data Principles to Facilitate Missing Data Exploration, Visualization and Assessment of Imputations. Journal of Statistical Software, 105(7), 1–31. doi:10.18637/jss.v105.i07.
+
+  Wickham, H., et al. (2019). Welcome to the tidyverse. Journal of Open Source Software, 4(43), 1686. doi:10.21105/joss.01686. 
+
+  Zelman, K. M. (2013, July 22). How many calories are in your drink? Retrieved from https://www.webmd.com/diet/calories-in-drinks-and-popular-beverages
+
+  Zhu, H. (2021). kableExtra: Construct Complex Table with 'kable' and Pipe Syntax. R package version 1.3.4. Retrieved from https://CRAN.R-project.org/package=kableExtra
+
