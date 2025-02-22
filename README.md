@@ -6,7 +6,7 @@ Created by **Jason Abi Chebli**
 <div style="text-align: justify;"> This analysis explores Starbucks’ hot coffee drinks, focusing on key factors such as caffeine content, calorie counts, and the healthiness of different drink combinations. The goal was to understand how different elements, such as drink size, milk type, and whipped cream, impact the nutritional content of these beverages. Through linear regression models and various data visualizations, I identified which combinations provide the best balance between caffeine and calorie content, and which ones are healthier overall. This analysis aims to help consumers make more informed choices when ordering their Starbucks coffee. </div>
 
 ## Demo
-To view the analysis I did, [here](https://jabichebli.github.io/starbucksAnalysis/Jason_Abi-Chebli_31444059_A2.html)
+The analysis I did can be found [here.](https://jabichebli.github.io/starbucksAnalysis/Jason_Abi-Chebli_31444059_A2.html)
 
 ## Data 
 The Starbucks dataset used in this analysis came from [Tidy Tuesday](https://github.com/rfordatascience/tidytuesday/blob/main/data/2021/2021-12-21/readme.md).
