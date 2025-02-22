@@ -12,7 +12,6 @@ To view the analysis I did, [here](https://jabichebli.github.io/starbucksAnalysi
 The Starbucks dataset used in this analysis came from [Tidy Tuesday](https://github.com/rfordatascience/tidytuesday/blob/main/data/2021/2021-12-21/readme.md).
 
 ## Analysis Types
-<div style="text-align: justify;"> 
 This analysis includes several types of data exploration:
 
 1. **Caffeine vs. Calorie Analysis:** I examined which Starbucks hot coffee drink offers the highest caffeine content while maintaining the lowest calorie count. The top-performing drinks were identified based on their caffeine-to-calorie ratio.
@@ -20,11 +19,11 @@ This analysis includes several types of data exploration:
 2. **Healthiness Analysis:** I explored how the size, milk type, and presence of whipped cream affect the overall healthiness of the drinks. Linear regression models were used to quantify the impact of these parameters on calorie content, helping to determine which drink combinations are the healthiest.
 
 3. **Regression Modeling:** I employed linear regression models to predict calorie content based on size, milk type, and whipped cream. These models helped to understand how each factor influences calorie content.
-</div>
+
 
 ## Specific Data Analysis Techniques
 <div style="text-align: justify;"> 
-In this analysis, various technical data analysis techniques and visualizations were employed to understand the relationships between Starbucks drink parameters and their nutritional content. Below is a list of the specific techniques and charts used:
+In this analysis, various technical data analysis techniques and visualizations were employed to understand the relationships between Starbucks drink parameters and their nutritional content. Below is a list of the specific techniques and charts used:</div>
 
 - **Bubble Chart**
 - **Q-Q Plot (Quantile-Quantile Plot)**
@@ -34,7 +33,7 @@ In this analysis, various technical data analysis techniques and visualizations 
 - **Heatmap**
 - **Density Plot**
 - **Bar Chart**
-</div>
+
 
 ## Feedback
 
